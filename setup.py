@@ -10,7 +10,7 @@ import btdjango
 
 setup(
     name='btdjango',
-    version=btdjango.VERSION,
+    version=1.4,
     packages=['btdjango'],
 )
 
