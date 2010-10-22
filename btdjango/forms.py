@@ -25,7 +25,7 @@ class BraintreeForm(forms.Form):
         various forms in this file for implementing Braintree transparent
         redirects.
 
-        When creating a new instance of a Braintree form you MUST pass in a 
+        When creating a new instance of a Braintree form you MUST pass in a
         result object as returned by BraintreeForm.get_result(...). You SHOULD
         also pass in a redirect_url keyword parameter.
 
@@ -57,10 +57,10 @@ class BraintreeForm(forms.Form):
                 {{ form.as_table }}
                 <button type="submit">Submit order</button>
             </form>
-        
+
     """
     tr_type = ""
-    
+
     # Order of fields matters so we used an ordered dictionary
     tr_fields = OrderedDict()
     tr_labels = {}
@@ -69,7 +69,7 @@ class BraintreeForm(forms.Form):
 
     # A list of fields that should be boolean (checkbox) options
     tr_boolean_fields = []
-    
+
     @classmethod
     def get_result(cls, request):
         """
@@ -117,24 +117,24 @@ class BraintreeForm(forms.Form):
                 label = labels[key]
             else:
                 label = key.split("[")[-1].strip("]").replace("_", " ").title()
-            
+
             if key in self.tr_boolean_fields:
                 # A checkbox MUST set value="true" for Braintree to pick
                 # it up properly, refer to Braintree ticket #26438
                 field = forms.BooleanField(label=label, required=False, widget=widgets.CheckboxInput(attrs={"checked": True, "value": "true", "class": "checkbox"}))
             elif key.endswith("[expiration_month]"):
                 # Month selection should be a simple dropdown
-                field = forms.ChoiceField(choices=[(x,x) for x in range(1, 13)], required=False)
+                field = forms.ChoiceField(choices=[(x,x) for x in range(1, 13)], required=False, label=label)
             elif key.endswith("[expiration_year]"):
                 # Year selection should be a simple dropdown
                 year = datetime.date.today().year
-                field = forms.ChoiceField(choices=[(x,x) for x in range(year, year + 16)], required=False)
+                field = forms.ChoiceField(choices=[(x,x) for x in range(year, year + 16)], required=False, label=label)
             else:
                 field = forms.CharField(label=label, required=False)
 
             if key in helptext:
                 field.help_text = helptext[key]
-                
+
             self.fields[key] = field
 
     def _flatten_dictionary(self, params, parent=None):
@@ -153,7 +153,7 @@ class BraintreeForm(forms.Form):
                     "test[bar]": hello,
                     "baz": False
                 }
-                
+
         """
         data = OrderedDict()
         for key, val in params.items():
@@ -204,19 +204,19 @@ class BraintreeForm(forms.Form):
             prior to rendering the form!
         """
         tr_data = deepcopy(self.tr_fields)
-        
+
         if self._errors:
             tr_data.update(self.tr_protected)
         else:
             tr_data.recursive_update(self.tr_protected)
-            
+
         self._remove_none(tr_data)
 
         if hasattr(getattr(braintree, self.tr_type), "tr_data_for_sale"):
             signed = getattr(braintree, self.tr_type).tr_data_for_sale(tr_data, self.redirect_url)
         else:
             signed = getattr(braintree, self.tr_type).tr_data_for_create(tr_data, self.redirect_url)
-        
+
         self.fields["tr_data"] = forms.CharField(initial=signed, widget=widgets.HiddenInput())
 
     def remove_section(self, section):
@@ -298,6 +298,8 @@ class TransactionForm(BraintreeForm):
         "transaction": {
             "credit_card": {
                 "cvv": "CVV",
+                 "expiration_month": "Expiration Month",
+                 "expiration_year": "Expiration Year",
             },
             "options": {
                 "store_in_vault": "Save credit card",
